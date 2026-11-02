@@ -1,0 +1,32 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "flwpf/watering-plan",
+	"version": "1.0.0",
+	"title": "Florida Lawn Watering Calculator",
+	"category": "widgets",
+	"icon": "palmtree",
+	"description": "This week's lawn watering plan for a Florida city: last week's rain, the lawn's need and a run-or-skip answer under the local watering rules.",
+	"keywords": [
+		"lawn",
+		"watering",
+		"irrigation",
+		"sprinkler",
+		"florida"
+	],
+	"textdomain": "florida-lawn-watering-pest-forecast",
+	"attributes": {
+		"location": {
+			"type": "string",
+			"default": "bradenton-fl"
+		},
+		"grass": {
+			"type": "string",
+			"default": ""
+		}
+	},
+	"supports": {
+		"html": false
+	},
+	"editorScript": "file:./index.js"
+}

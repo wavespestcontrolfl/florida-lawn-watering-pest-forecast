@@ -1,0 +1,32 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "flwpf/pest-forecast",
+	"version": "1.0.0",
+	"title": "Florida Pest Pressure Forecast",
+	"category": "widgets",
+	"icon": "chart-bar",
+	"description": "This month's modeled pest pressure for a Florida city: ants, roaches, mosquitoes and more, each with a level and its seasonal baseline.",
+	"keywords": [
+		"pest",
+		"forecast",
+		"mosquito",
+		"termite",
+		"florida"
+	],
+	"textdomain": "florida-lawn-watering-pest-forecast",
+	"attributes": {
+		"location": {
+			"type": "string",
+			"default": "bradenton-fl"
+		},
+		"limit": {
+			"type": "number",
+			"default": 6
+		}
+	},
+	"supports": {
+		"html": false
+	},
+	"editorScript": "file:./index.js"
+}
