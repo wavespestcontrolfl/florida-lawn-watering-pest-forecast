@@ -1,8 +1,7 @@
-// Builds the WordPress.org upload: copies the two widget scripts into the plugin, rebuilds the
-// city list from the public API, checks the version, and zips the plugin folder.
+// Builds the WordPress.org upload: checks the version and the widget scripts' link rules, rebuilds
+// the city list from the public API, and zips the plugin folder.
 //
-//   node build.mjs                          widget scripts from https://www.wavespestcontrol.com/embed/
-//   node build.mjs --embed-base <dir|url>   widget scripts from another place (a local checkout)
+//   node build.mjs
 //
 // Writes dist/florida-lawn-watering-pest-forecast-<version>.zip. Node 18 or newer, and `zip`.
 import { execFileSync } from 'node:child_process';
@@ -16,24 +15,19 @@ const PLUGIN = join(ROOT, SLUG);
 const LOCATIONS_API = 'https://portal.wavespestcontrol.com/api/public/pest-forecast/locations';
 const WIDGETS = ['watering-plan.v1.js', 'pest-forecast.v1.js'];
 
-const flag = process.argv.indexOf('--embed-base');
-const embedBase = flag > -1 ? process.argv[flag + 1] : 'https://www.wavespestcontrol.com/embed/';
+// The only https addresses the widget scripts may hold: the two API endpoints and the two credit
+// pages. The rules link takes its address from the API, but the script accepts only official
+// government hosts for it.
+const ALLOWED_URLS = new Set([
+  'https://portal.wavespestcontrol.com/api/public/watering-plan',
+  'https://portal.wavespestcontrol.com/api/public/pest-forecast',
+  'https://www.wavespestcontrol.com/tools/lawn-watering-calculator/',
+  'https://www.wavespestcontrol.com/tools/pest-pressure-forecast/',
+]);
 
 function fail(message) {
   console.error(`build: ${message}`);
   process.exit(1);
-}
-
-async function readSource(base, name) {
-  if (/^https:\/\//.test(base)) {
-    // A query string skips the CDN's cached copy (the embed scripts are cached for an hour).
-    const url = new URL(name, base.endsWith('/') ? base : `${base}/`);
-    url.searchParams.set('build', String(Date.now()));
-    const res = await fetch(url);
-    if (!res.ok) fail(`${name}: HTTP ${res.status}`);
-    return res.text();
-  }
-  return readFileSync(join(base, name), 'utf8');
 }
 
 // 1. One version everywhere.
@@ -45,14 +39,18 @@ if (!version || version !== constant || version !== stable) {
   fail(`version mismatch: header ${version}, FLWPF_VERSION ${constant}, readme Stable tag ${stable}`);
 }
 
-// 2. The widget scripts, which must support data-credit="off" (WordPress.org guideline 10: credits opt-in).
-mkdirSync(join(PLUGIN, 'assets', 'js'), { recursive: true });
+// 2. The widget scripts (WordPress.org guideline 10): every link is opt-in, and link and API
+// addresses are fixed in the script.
 for (const name of WIDGETS) {
-  const code = await readSource(embedBase, name);
-  if (!code.includes("getAttribute('data-credit') !== 'off'")) {
-    fail(`${name} from ${embedBase} does not support data-credit="off"; the credit would show by default`);
+  const code = readFileSync(join(PLUGIN, 'assets', 'js', name), 'utf8');
+  for (const url of code.match(/https:\/\/[^\s'"`)<>\\]+/g) || []) {
+    if (!ALLOWED_URLS.has(url)) fail(`${name}: unexpected address ${url}`);
   }
-  writeFileSync(join(PLUGIN, 'assets', 'js', name), code);
+  if (!code.includes("getAttribute('data-credit') === 'on'")) fail(`${name}: the credit link must be opt-in`);
+  if (name === 'watering-plan.v1.js' && !code.includes("getAttribute('data-rules-link') === 'on'")) {
+    fail(`${name}: the rules link must be opt-in`);
+  }
+  if (code.includes('data-api')) fail(`${name}: the API address must stay fixed`);
 }
 
 // 3. The city list.
@@ -86,4 +84,4 @@ mkdirSync(dist, { recursive: true });
 const zipPath = join(dist, `${SLUG}-${version}.zip`);
 rmSync(zipPath, { force: true });
 execFileSync('zip', ['-r', '-X', '-q', zipPath, SLUG, '-x', '*.DS_Store'], { cwd: ROOT });
-console.log(`wrote ${zipPath} (version ${version}, ${locations.length} cities, widgets from ${embedBase})`);
+console.log(`wrote ${zipPath} (version ${version}, ${locations.length} cities)`);

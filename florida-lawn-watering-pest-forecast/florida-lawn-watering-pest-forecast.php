@@ -21,6 +21,7 @@ define( 'FLWPF_VERSION', '1.0.0' );
 define( 'FLWPF_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FLWPF_URL', plugin_dir_url( __FILE__ ) );
 define( 'FLWPF_OPTION_CREDIT', 'flwpf_show_credit' );
+define( 'FLWPF_OPTION_RULES_LINK', 'flwpf_show_rules_link' );
 define( 'FLWPF_DEFAULT_LOCATION', 'bradenton-fl' );
 
 /**
@@ -61,6 +62,15 @@ function flwpf_credit_on() {
 }
 
 /**
+ * Whether the site owner turned on the watering widget's link to the official watering rules. Off by default.
+ *
+ * @return bool
+ */
+function flwpf_rules_link_on() {
+	return '1' === get_option( FLWPF_OPTION_RULES_LINK, '0' );
+}
+
+/**
  * A known city slug, or the default city.
  *
  * @param mixed $location Requested slug.
@@ -72,8 +82,10 @@ function flwpf_clean_location( $location ) {
 }
 
 /**
- * The HTML mount a widget script fills in. With the credit on, a plain link to the tool page sits inside
- * the mount so it is there before the script runs; the script keeps it as the widget's credit link.
+ * The HTML mount a widget script fills in. Links are opt-in: the mount says data-credit="on" (and, for the
+ * watering plan, data-rules-link="on") only when the site owner turned that link on. With the credit on, a
+ * plain link to the tool page sits inside the mount so it is there before the script runs; the script keeps
+ * it as the widget's credit link.
  *
  * @param string               $class    Mount class the widget script looks for.
  * @param string               $handle   Script handle to enqueue.
@@ -135,8 +147,9 @@ function flwpf_render_watering_plan( $atts ) {
 		'waves-watering-plan',
 		'flwpf-watering-plan',
 		array(
-			'location' => flwpf_clean_location( $atts['location'] ),
-			'grass'    => $grass,
+			'location'   => flwpf_clean_location( $atts['location'] ),
+			'grass'      => $grass,
+			'rules-link' => flwpf_rules_link_on() ? 'on' : 'off',
 		),
 		'https://www.wavespestcontrol.com/tools/lawn-watering-calculator/',
 		__( 'Lawn Watering Calculator by Waves Pest Control', 'florida-lawn-watering-pest-forecast' ),
@@ -239,7 +252,7 @@ function flwpf_init() {
 add_action( 'init', 'flwpf_init' );
 
 /**
- * The credit setting: a checkbox stored as '1' or '0'.
+ * The two link settings, each a checkbox stored as '1' or '0'. Both are off by default.
  */
 function flwpf_register_settings() {
 	register_setting(
@@ -251,11 +264,32 @@ function flwpf_register_settings() {
 			'sanitize_callback' => 'flwpf_sanitize_flag',
 		)
 	);
-	add_settings_section( 'flwpf_main', '', '__return_false', 'flwpf' );
+	register_setting(
+		'flwpf',
+		FLWPF_OPTION_RULES_LINK,
+		array(
+			'type'              => 'string',
+			'default'           => '0',
+			'sanitize_callback' => 'flwpf_sanitize_flag',
+		)
+	);
+	add_settings_section(
+		'flwpf_main',
+		__( 'Links', 'florida-lawn-watering-pest-forecast' ),
+		'flwpf_render_links_section',
+		'flwpf'
+	);
 	add_settings_field(
 		FLWPF_OPTION_CREDIT,
 		__( 'Credit link', 'florida-lawn-watering-pest-forecast' ),
 		'flwpf_render_credit_field',
+		'flwpf',
+		'flwpf_main'
+	);
+	add_settings_field(
+		FLWPF_OPTION_RULES_LINK,
+		__( 'Watering rules link', 'florida-lawn-watering-pest-forecast' ),
+		'flwpf_render_rules_link_field',
 		'flwpf',
 		'flwpf_main'
 	);
@@ -273,6 +307,13 @@ function flwpf_sanitize_flag( $value ) {
 }
 
 /**
+ * The line under the Links heading.
+ */
+function flwpf_render_links_section() {
+	echo '<p>' . esc_html__( 'Both links are off by default. The widgets link to other sites only if you turn a link on here.', 'florida-lawn-watering-pest-forecast' ) . '</p>';
+}
+
+/**
  * The credit checkbox.
  */
 function flwpf_render_credit_field() {
@@ -282,6 +323,19 @@ function flwpf_render_credit_field() {
 		checked( flwpf_credit_on(), true, false ),
 		esc_html__( 'Show a "Powered by Waves Pest Control" link under each widget.', 'florida-lawn-watering-pest-forecast' ),
 		esc_html__( 'Off by default. Turn it on if you want to credit the source of the data.', 'florida-lawn-watering-pest-forecast' )
+	);
+}
+
+/**
+ * The watering rules link checkbox.
+ */
+function flwpf_render_rules_link_field() {
+	printf(
+		'<label><input type="checkbox" name="%1$s" value="1" %2$s> %3$s</label><p class="description">%4$s</p>',
+		esc_attr( FLWPF_OPTION_RULES_LINK ),
+		checked( flwpf_rules_link_on(), true, false ),
+		esc_html__( 'Link the watering widget\'s "Check your county\'s watering rules" line to the official rules page for its city.', 'florida-lawn-watering-pest-forecast' ),
+		esc_html__( 'Off by default, and the line then shows as plain text. The link goes only to an official government page: the water management district or a state agency.', 'florida-lawn-watering-pest-forecast' )
 	);
 }
 

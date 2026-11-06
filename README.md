@@ -4,8 +4,8 @@ A free WordPress plugin from [Waves Pest Control](https://www.wavespestcontrol.c
 widgets for Florida lawns and homes, each as a block and a shortcode:
 
 - **Florida Lawn Watering Calculator**: this week's watering plan for a Florida city (last week's
-  rain, the forecast, the lawn's need, and water / skip / need only), with a link to the county's
-  water management district rules.
+  rain, the forecast, the lawn's need, and water / skip / need only), with a reminder to check the
+  county's watering rules.
 - **Florida Pest Pressure Forecast**: this month's modeled pest pressure for a Florida city.
 
 The data comes from the free Waves public API (no key). See
@@ -17,16 +17,22 @@ open-source watering math.
 - `florida-lawn-watering-pest-forecast/`: the plugin, exactly as it ships to WordPress.org.
   - `florida-lawn-watering-pest-forecast.php`: shortcodes, block registration, the settings page.
   - `blocks/*/`: `block.json` plus a plain editor script (no build step).
-  - `assets/js/*.v1.js`: the widget scripts, copied from `wavespestcontrol.com/embed/` by the build.
+  - `assets/js/*.v1.js`: the widget scripts. They started as copies of the site's embed scripts
+    (`wavespestcontrol.com/embed/`) and differ on purpose: no links unless the site owner turns one
+    on, and fixed API and link addresses. Edit them here; the build does not copy them.
   - `includes/locations.php`: the 26 supported cities, built from the API's city list.
-- `build.mjs`: copies the widget scripts, rebuilds the city list, checks the version and writes
-  `dist/florida-lawn-watering-pest-forecast-<version>.zip`.
+- `build.mjs`: checks the version and the widget scripts' link rules, rebuilds the city list and
+  writes `dist/florida-lawn-watering-pest-forecast-<version>.zip`.
 
 ## Rules this plugin keeps
 
-- **The credit link is off by default** (WordPress.org guideline 10). Every mount carries
-  `data-credit="off"` unless the site owner turns the credit on under Settings > Lawn & Pest
-  Forecast. The build refuses widget scripts that do not support `data-credit="off"`.
+- **Every link is off by default** (WordPress.org guideline 10). There are two: the credit link
+  to Waves Pest Control and the watering widget's link to the official watering rules. The site
+  owner turns each one on under Settings > Lawn & Pest Forecast; until then the mounts carry
+  `data-credit="off"` and `data-rules-link="off"`, and the scripts show a link only for `"on"`.
+  The rules link goes only to an official government host (`.gov`, `.state.fl.us` or a water
+  management district), even if the API sends another address. The build refuses widget scripts
+  that break these rules or hold any https address outside its list.
 - **No remote code.** The widget scripts ship inside the plugin; only JSON comes from the API,
   which the readme's "External services" section documents.
 - Shortcode and block input is checked: an unknown city falls back to Bradenton, an unknown grass
@@ -35,8 +41,7 @@ open-source watering math.
 ## Build and test
 
 ```sh
-node build.mjs                                   # widget scripts from the live site
-node build.mjs --embed-base ../path/public/embed # or from a local wavespestcontrol-astro checkout
+node build.mjs
 ```
 
 Test the zip in [WordPress Playground](https://playground.wordpress.net/): Plugins > Add New >

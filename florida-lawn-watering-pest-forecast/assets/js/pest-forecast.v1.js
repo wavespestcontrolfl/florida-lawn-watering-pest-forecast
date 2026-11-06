@@ -1,21 +1,16 @@
 /*!
- * Waves Pest Control — Florida Pest Pressure Forecast embed (v1)
- * Free embeddable widget. Drop this on any site:
+ * Florida Lawn Watering & Pest Forecast (WordPress plugin): Florida Pest Pressure Forecast widget.
  *
- *   <div class="waves-pest-forecast" data-location="bradenton-fl">
- *     <a href="https://www.wavespestcontrol.com/tools/pest-pressure-forecast/">
- *       Florida Pest Pressure Forecast by Waves Pest Control</a>
- *   </div>
- *   <script async src="https://www.wavespestcontrol.com/embed/pest-forecast.v1.js"></script>
+ * Fills each mount the plugin's shortcode or block prints:
  *
- * Optional: data-credit="off" leaves out the Waves credit line and link, for
- * directories whose rules make credits opt-in (the WordPress.org plugin turns
- * the credit on only when the site owner chooses it).
+ *   <div class="waves-pest-forecast" data-location="bradenton-fl" data-limit="6" data-credit="off"></div>
  *
- * The widget renders into the host page's light DOM (not an iframe / shadow
- * root) so the attribution link is a real, crawlable backlink to Waves. CSS is
- * scoped under .wpcpf-root to avoid bleeding into — or inheriting from — the
- * host page. Self-contained: no dependencies, safe to load more than once.
+ * The data comes from the Waves Pest Control public API (see "External services" in the readme).
+ * Links are opt-in (WordPress.org guideline 10): the widget adds no link to the page unless the
+ * mount says data-credit="on", and the plugin prints "on" only after the site owner turns the
+ * credit on under Settings > Lawn & Pest Forecast. The credit address is fixed here; the widget
+ * never takes a link address from the API. CSS is scoped under .wpcpf-root. No dependencies; safe
+ * to load more than once.
  */
 (function () {
   'use strict';
@@ -83,16 +78,16 @@
     return n;
   }
 
-  // The credit shows unless the mount says data-credit="off".
-  function creditOn(mount) { return mount.getAttribute('data-credit') !== 'off'; }
+  // The credit is opt-in. The plugin prints data-credit="on" only when the site owner turned it
+  // on; a missing or any other value means no link.
+  function creditOn(mount) { return mount.getAttribute('data-credit') === 'on'; }
 
-  // Find an existing attribution <a> the host pasted, or build one. Either way
-  // the returned anchor lives in the host's light DOM = a real backlink.
-  function resolveAnchor(mount, forecast, locationSlug) {
+  // The credit link. With the credit on, the plugin prints the link inside the mount; the widget
+  // keeps that link and gives it the widget's style. It builds the same link only if none is there.
+  function resolveAnchor(mount, locationSlug) {
     var existing = mount.querySelector('a[href]');
-    var href = (forecast && forecast.attribution && forecast.attribution.url)
-      || (LANDING + '?utm_source=embed&utm_medium=widget&utm_campaign=pest-forecast'
-          + (locationSlug ? '&utm_content=' + encodeURIComponent(locationSlug) : ''));
+    var href = LANDING + '?utm_source=wordpress-plugin&utm_medium=widget&utm_campaign=pest-forecast'
+      + (locationSlug ? '&utm_content=' + encodeURIComponent(locationSlug) : '');
     var a = existing || document.createElement('a');
     if (!existing) a.setAttribute('href', href);
     a.className = 'wpcpf-attr';
@@ -151,7 +146,7 @@
 
     var foot = el('div', 'wpcpf-foot');
     if (forecast.summary) foot.appendChild(el('span', 'wpcpf-summary', forecast.summary));
-    if (creditOn(mount)) foot.appendChild(resolveAnchor(mount, forecast, locationSlug));
+    if (creditOn(mount)) foot.appendChild(resolveAnchor(mount, locationSlug));
     if (forecast.disclaimer) foot.appendChild(el('span', 'wpcpf-disc', forecast.disclaimer));
     card.appendChild(foot);
 
@@ -169,7 +164,7 @@
     card.appendChild(head);
     var foot = el('div', 'wpcpf-foot');
     foot.appendChild(el('span', 'wpcpf-summary', 'Live forecast is temporarily unavailable.'));
-    if (creditOn(mount)) foot.appendChild(resolveAnchor(mount, null, locationSlug));
+    if (creditOn(mount)) foot.appendChild(resolveAnchor(mount, locationSlug));
     card.appendChild(foot);
     root.appendChild(card);
     mount.innerHTML = '';
@@ -180,23 +175,16 @@
     if (mount.getAttribute('data-wpcpf-init') === '1') return;
     mount.setAttribute('data-wpcpf-init', '1');
 
-    var apiBase = mount.getAttribute('data-api') || API;
     var location = mount.getAttribute('data-location') || '';
-    var zip = mount.getAttribute('data-zip') || '';
     var limit = parseInt(mount.getAttribute('data-limit'), 10);
     if (limit > 0) mount.__wpcpfLimit = limit;
 
-    var qs = [];
-    if (location) qs.push('location=' + encodeURIComponent(location));
-    else if (zip) qs.push('zip=' + encodeURIComponent(zip));
-    var url = apiBase + (qs.length ? '?' + qs.join('&') : '');
+    var url = API + (location ? '?location=' + encodeURIComponent(location) : '');
 
     var skel = el('div', 'wpcpf-root');
     var skCard = el('div', 'wpcpf-card');
     skCard.appendChild(el('div', 'wpcpf-skel', 'Loading Florida pest pressure forecast…'));
     skel.appendChild(skCard);
-    // Keep the host's pasted anchor (backlink) visible even while loading.
-    if (!mount.querySelector('a[href]')) { /* nothing to preserve */ }
     mount.appendChild(skel);
 
     fetch(url, { credentials: 'omit' })

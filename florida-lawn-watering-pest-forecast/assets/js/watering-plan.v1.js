@@ -1,22 +1,16 @@
 /*!
- * Waves Pest Control — Lawn Watering Calculator embed (v1)
- * Free embeddable widget. Drop this on any site:
+ * Florida Lawn Watering & Pest Forecast (WordPress plugin): Lawn Watering Calculator widget.
  *
- *   <div class="waves-watering-plan" data-location="bradenton-fl">
- *     <a href="https://www.wavespestcontrol.com/tools/lawn-watering-calculator/">
- *       Lawn Watering Calculator — Bradenton, FL · by Waves Pest Control</a>
- *   </div>
- *   <script async src="https://www.wavespestcontrol.com/embed/watering-plan.v1.js"></script>
+ * Fills each mount the plugin's shortcode or block prints:
  *
- * Optional: data-grass="st_augustine|zoysia|bahia|bermuda|unknown".
- * Optional: data-credit="off" leaves out the Waves credit line and link, for
- * directories whose rules make credits opt-in (the WordPress.org plugin turns
- * the credit on only when the site owner chooses it).
+ *   <div class="waves-watering-plan" data-location="bradenton-fl" data-credit="off" data-rules-link="off"></div>
  *
- * The widget renders into the host page's light DOM (not an iframe / shadow
- * root) so the attribution link is a real, crawlable backlink to Waves. CSS is
- * scoped under .wwp-root to avoid bleeding into — or inheriting from — the
- * host page. Self-contained: no dependencies, safe to load more than once.
+ * The data comes from the Waves Pest Control public API (see "External services" in the readme).
+ * Links are opt-in (WordPress.org guideline 10): the widget adds no link to the page unless the
+ * mount says data-credit="on" or data-rules-link="on", and the plugin prints "on" only after the
+ * site owner turns that link on under Settings > Lawn & Pest Forecast. Link addresses are fixed
+ * here: the credit goes to the Waves tool page, and the rules link only to an official government
+ * page. CSS is scoped under .wwp-root. No dependencies; safe to load more than once.
  */
 (function () {
   'use strict';
@@ -25,7 +19,9 @@
 
   var API = 'https://portal.wavespestcontrol.com/api/public/watering-plan';
   var LANDING = 'https://www.wavespestcontrol.com/tools/lawn-watering-calculator/';
-  var RULES_FALLBACK = 'https://www.swfwmd.state.fl.us/business/epermitting/district-water-restrictions';
+  // The rules link may point only at an official page: a .gov or state.fl.us site, or one of the
+  // water management districts that use a .com address.
+  var OFFICIAL_HOST = /(^|\.)(gov|state\.fl\.us|nwfwater\.com|sjrwmd\.com|mysuwanneeriver\.com)$/i;
   var SELECTOR = '[data-waves-watering-plan], .waves-watering-plan';
   var GRASS = { st_augustine: 1, zoysia: 1, bahia: 1, bermuda: 1, unknown: 1 };
 
@@ -53,6 +49,7 @@
     '.wwp-value{font-size:14px;font-weight:700;color:#1B2C5B;text-align:right}',
     '.wwp-foot{padding:11px 16px 13px;border-top:1px solid #eef3f8;background:#f7fafc}',
     '.wwp-rules{display:block;font-size:12.5px;font-weight:700;color:#0a6fb0;text-decoration:underline;margin-bottom:8px}',
+    '.wwp-rules-text{display:block;font-size:12.5px;font-weight:600;color:#3c4a63;margin-bottom:8px}',
     '.wwp-summary{display:block;font-size:12.5px;color:#3c4a63;margin-bottom:8px}',
     '.wwp-attr{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;',
       'color:#0a6fb0;text-decoration:none}',
@@ -80,17 +77,23 @@
   function clean(s) { return (typeof s === 'string' && s && !DAY_RE.test(s)) ? s : ''; }
   function isNum(n) { return typeof n === 'number' && isFinite(n); }
   function inches(n) { return (Math.round(n * 100) / 100).toString() + ' in'; }
-  function safeUrl(u) { return (typeof u === 'string' && /^https:\/\//i.test(u)) ? u : ''; }
+  function officialUrl(u) {
+    if (typeof u !== 'string' || !/^https:\/\//i.test(u)) return '';
+    var host = '';
+    try { host = new URL(u).hostname; } catch (e) { return ''; }
+    return OFFICIAL_HOST.test(host) ? u : '';
+  }
 
-  // The credit shows unless the mount says data-credit="off".
-  function creditOn(mount) { return mount.getAttribute('data-credit') !== 'off'; }
+  // Links are opt-in. The plugin prints data-credit="on" or data-rules-link="on" only when the
+  // site owner turned that link on; a missing or any other value means no link.
+  function creditOn(mount) { return mount.getAttribute('data-credit') === 'on'; }
+  function rulesLinkOn(mount) { return mount.getAttribute('data-rules-link') === 'on'; }
 
-  // Find an existing attribution <a> the host pasted, or build one. Either way
-  // the returned anchor lives in the host's light DOM = a real backlink. A site
-  // owner may edit its text.
+  // The credit link. With the credit on, the plugin prints the link inside the mount; the widget
+  // keeps that link and gives it the widget's style. It builds the same link only if none is there.
   function resolveAnchor(mount, locationSlug) {
     var existing = mount.querySelector('a[href]');
-    var href = LANDING + '?utm_source=embed&utm_medium=widget&utm_campaign=watering-plan'
+    var href = LANDING + '?utm_source=wordpress-plugin&utm_medium=widget&utm_campaign=watering-plan'
       + (locationSlug ? '&utm_content=' + encodeURIComponent(locationSlug) : '');
     var a = existing || document.createElement('a');
     if (!existing) a.setAttribute('href', href);
@@ -98,6 +101,17 @@
     a.textContent = '';
     a.appendChild(el('span', null, 'Powered by Waves Pest Control'));
     a.appendChild(el('span', 'wwp-arrow', '→'));
+    return a;
+  }
+
+  // "Check your county's watering rules": a link to the official rules page only when the site
+  // owner turned the rules link on and the address is an official one; plain text otherwise.
+  function rulesLine(mount, url) {
+    var href = rulesLinkOn(mount) ? officialUrl(url) : '';
+    if (!href) return el('span', 'wwp-rules-text', 'Check your county’s watering rules before you water.');
+    var a = el('a', 'wwp-rules', 'Check your county’s watering rules');
+    a.setAttribute('href', href);
+    a.setAttribute('rel', 'noopener');
     return a;
   }
 
@@ -144,10 +158,7 @@
     card.appendChild(body);
 
     var foot = el('div', 'wwp-foot');
-    var rules = el('a', 'wwp-rules', 'Check your county’s watering rules');
-    rules.setAttribute('href', safeUrl(d.rulesUrl) || RULES_FALLBACK);
-    rules.setAttribute('rel', 'noopener');
-    foot.appendChild(rules);
+    foot.appendChild(rulesLine(mount, d.rulesUrl));
     if (creditOn(mount)) foot.appendChild(resolveAnchor(mount, locationSlug));
     var disc = clean(d.disclaimer);
     if (disc) foot.appendChild(el('span', 'wwp-disc', disc));
@@ -158,8 +169,8 @@
     mount.appendChild(root);
   }
 
-  // On any failure the card shows only the fallback link(s): no error jargon,
-  // and the credit link stays in place unless data-credit is off.
+  // On any failure the card shows no numbers and no error jargon: the title, the rules reminder
+  // (as plain text, because the rules page is not known) and the credit link if it is on.
   function renderError(mount, locationSlug) {
     var root = el('div', 'wwp-root');
     var card = el('div', 'wwp-card');
@@ -168,10 +179,7 @@
     if (creditOn(mount)) head.appendChild(el('div', 'wwp-meta', 'by Waves Pest Control'));
     card.appendChild(head);
     var foot = el('div', 'wwp-foot');
-    var rules = el('a', 'wwp-rules', 'Check your county’s watering rules');
-    rules.setAttribute('href', RULES_FALLBACK);
-    rules.setAttribute('rel', 'noopener');
-    foot.appendChild(rules);
+    foot.appendChild(rulesLine(mount, ''));
     if (creditOn(mount)) foot.appendChild(resolveAnchor(mount, locationSlug));
     card.appendChild(foot);
     root.appendChild(card);
@@ -191,14 +199,13 @@
     mount.setAttribute('data-wwp-req', requestId);
     function current() { return mount.getAttribute('data-wwp-req') === requestId; }
 
-    var apiBase = mount.getAttribute('data-api') || API;
     var location = mount.getAttribute('data-location') || '';
     var grass = mount.getAttribute('data-grass') || '';
 
     var qs = [];
     if (location) qs.push('location=' + encodeURIComponent(location));
     if (GRASS[grass]) qs.push('grass=' + grass);
-    var url = apiBase + (qs.length ? '?' + qs.join('&') : '');
+    var url = API + (qs.length ? '?' + qs.join('&') : '');
 
     var skel = el('div', 'wwp-root');
     var skCard = el('div', 'wwp-card');

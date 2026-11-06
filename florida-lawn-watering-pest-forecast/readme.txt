@@ -14,7 +14,7 @@ Free Florida lawn watering calculator and pest pressure forecast widgets, as blo
 
 Add two free, live widgets for Florida lawns and homes to any page.
 
-**Florida Lawn Watering Calculator.** This week's watering plan for a Florida city: the rain of the last 7 days, this week's forecast, the lawn's weekly need, and a plain answer: water this week, skip this week, or (where no watering order is tracked) the lawn's need only. It never names watering days. It links the county's water management district rules instead, because local watering rules always come first.
+**Florida Lawn Watering Calculator.** This week's watering plan for a Florida city: the rain of the last 7 days, this week's forecast, the lawn's weekly need, and a plain answer: water this week, skip this week, or (where no watering order is tracked) the lawn's need only. It never names watering days. It tells visitors to check their county's watering rules instead, because local watering rules always come first.
 
 **Florida Pest Pressure Forecast.** This month's modeled pest pressure for a Florida city: German cockroaches, palmetto bugs, ants, mosquitoes, fleas and ticks, wasps, rats and mice, and subterranean termites. Each pest gets a level and a comparison with its seasonal baseline. It is a seasonal, weather-based model, not a measurement.
 
@@ -28,7 +28,7 @@ Add them with a block ("Florida Lawn Watering Calculator", "Florida Pest Pressur
 
 The widgets load their data in the visitor's browser, so your pages stay fully cacheable. There is no API key, no account and nothing to set up.
 
-**Credit link.** The widgets show no link to Waves Pest Control unless you turn on the credit link under Settings > Lawn & Pest Forecast.
+**Links are off by default.** The widgets show no links to other sites unless you turn them on under Settings > Lawn & Pest Forecast. There are two: a credit link to Waves Pest Control, and a link from the watering widget's "Check your county's watering rules" line to the official rules page (a water management district or state agency site).
 
 Made by Waves Pest Control, a licensed pest control and lawn care company in Southwest Florida. The watering math is open source: [waves-lawn-tools on GitHub](https://github.com/wavespestcontrolfl/waves-lawn-tools).
 
@@ -62,11 +62,15 @@ No. Both widgets cover 26 Florida cities. The settings page lists them.
 
 = Does the watering plan say which day to water? =
 
-No. Watering days depend on your address and your local rules, so the widget links your water management district's rules instead.
+No. Watering days depend on your address and your local rules, so the widget tells visitors to check their county's rules instead. Turn on the watering rules link to send them to the official rules page.
 
 = Is there a link to Waves Pest Control? =
 
 Only if you turn it on. The credit link is off by default.
+
+= Does it link to any other site? =
+
+Only if you turn the watering rules link on. It is off by default, and it goes only to an official government page: the water management district or a state agency.
 
 = Does it set cookies or collect personal data? =
 
